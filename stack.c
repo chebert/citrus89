@@ -4,8 +4,11 @@
 
 DefineStruct(Stack);
 
-Stack InitStack(ByteBuffer buffer, Stack stack_storage) {
-  return _Stack(buffer, 0, stack_storage);
+Stack MakeStack(ByteBuffer buffer) {
+  return Stack_(buffer, 0);
+}
+Stack InitStack(ByteBuffer buffer, Stack stack) {
+  return _Stack(buffer, 0, stack);
 }
 
 u1 *StackAllocate(Stack stack, size_t num_bytes) {

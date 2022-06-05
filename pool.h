@@ -1,13 +1,18 @@
 #ifndef POOL_H
 #define POOL_H
 
+#include "struct.h"
 #include "type.h"
 
-typedef struct Pool *pool;
+STRUCT_TYPEDEF(PoolFreeList);
+#define STRUCT_Pool(f)\
+  f(PoolFreeList, next)
+DeclareStruct(Pool);
 
-Pool MakePool(size_t num_elements, size_t num_bytes_per_element);
+Pool MakePool();
+Pool InitPool(Pool pool);
 
-u1 *PoolAllocate(Pool pool);
-void PoolFree(Pool pool, Any element);
+void *PoolAllocate(Pool pool);
+void PoolFree(Pool pool, void *element);
 
 #endif

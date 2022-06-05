@@ -52,6 +52,7 @@ DefineCompositeConstructor(SerializableShape);
 
 MethodDispatchFunctionAlias(Serialize, ToString, ToString);
 
+// TODO: move these allocators
 Method(PagedStack, Allocator, Allocate)
   return PagedStackAllocate(self, num_bytes);
 EndMethod
@@ -60,41 +61,52 @@ EndMethod
 DefineConstructor(Allocator);
 #undef OBJECT
 
+Method(Stack, Allocator, Allocate)
+  return StackAllocate(self, num_bytes);
+EndMethod
+
+#define OBJECT Stack
+DefineConstructor(Allocator);
+#undef OBJECT
+
 // NOTE:
 // Init: _Type(type-field-arguments..., Type storage) => Type
 // Make: Type_(type-field-arguments...) => newly allocated Type
-// Rename StructDeclaration etc. to DeclareStruct.
+
+#define STATIC_MEMORY_SIZE_IN_BYTES 1024
+static Allocator StaticAllocator() {
+  static Byte memory[STATIC_MEMORY_SIZE_IN_BYTES];
+  static struct ByteBuffer buffer;
+  static struct Stack stack;
+  static struct Allocator _allocator;
+  static Allocator allocator = NULL;
+
+  if (!allocator) {
+    allocator = _StackAllocator(
+        InitStack(_ByteBuffer(memory, sizeof(memory), &buffer), &stack),
+        &_allocator);
+  }
+  return allocator;
+}
 
 #define QUOTE(...) #__VA_ARGS__
 #define PRINT(macro_call) printf("\"%s\" expands to \"%s\"\n", #macro_call, QUOTE(macro_call))
-int main(int argc, char **argv) {
-  // Debug print Expansions
-  PRINT(DeclareInterface(Allocator));
-  PRINT(DefineInterface(Allocator));
-  PRINT(Interface(Shape));
-  PRINT(Method(Circle, Shape, SetPosition));
-#define OBJECT Circle
-  PRINT(DefineConstructor(Shape));
-  PRINT(DefineCompositeConstructor(SerializableShape));
-#undef OBJECT
-  PRINT(MethodDispatchFunctionAlias(Serialize, ToString, ToString));
 
+
+
+int main(int argc, char **argv) {
   CatchGlobalAllocatorOutOfMemoryError {
+    // Run this code if we ever run out of memory.
     fprintf(stderr, "Out of memory error\n");
     return -1;
   }
-  struct PagedStack _stack;
-  struct PagePool _pool;
-  struct Allocator _allocator;
+  // Use a static stack to allocate
+  SetGlobalAllocator(StaticAllocator());
 
-  u4 page_size_in_bytes = GetPageSizeInBytesFromOS();
-  // TODO: test the allocators a bit more seriously.
-  PagePool pool = InitPagePool(page_size_in_bytes, &_pool);
-  PagedStack stack = InitPagedStack(pool, &_stack);
-  SetGlobalAllocator(_PagedStackAllocator(stack, &_allocator));
+  PagedStack stack = MakePagedStack(MakePagePool(GetPageSizeInBytesFromOS()));
+  SetGlobalAllocator(PagedStackAllocator(stack));
 
-  // Now we can use the global allocator.
-
+  // Now we are using the stack for Allocate calls
   Circle circle = Circle_(3, 4, 5);
 
   // define multiple interfaces at once:
@@ -103,6 +115,7 @@ int main(int argc, char **argv) {
   ShapeSetPosition(ss->shape, -3, -4);
   printf("%s\n", ToString(ss->serialize));
 
+  // Clear the stack
   PagedStackClear(stack);
 
   circle = Circle_(9, 10, 15);
@@ -112,4 +125,5 @@ int main(int argc, char **argv) {
   printf("Area=%lf\n", ShapeArea(ss->shape));
   ShapeSetPosition(ss->shape, -3, -4);
   printf("%s\n", ToString(ss->serialize));
+  return 0;
 }

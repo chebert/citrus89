@@ -11,7 +11,8 @@
   f(size_t, index)
 DeclareStruct(Stack);
 
-Stack InitStack(ByteBuffer buffer, Stack stack_storage);
+Stack MakeStack(ByteBuffer buffer);
+Stack InitStack(ByteBuffer buffer, Stack stack);
 
 u1 *StackAllocate(Stack stack, size_t num_bytes);
 u1 *StackClear(Stack stack);

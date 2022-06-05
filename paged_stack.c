@@ -4,69 +4,81 @@
 
 #include "type.h"
 
-#define STRUCT_Header(f)\
-  f(Header, previous)\
+#define STRUCT_PagedAllocationHeader(f)\
+  f(PagedAllocationHeader, previous)\
   f(b4, is_page)
-Struct(Header);
+Struct(PagedAllocationHeader);
 DefineStruct(PagedStack);
 
-static Stack CurrentStack(PagedStack stack) {
-  return &stack->stack_storage;
-}
-static Bytes PageData(Header header) {
-  return (Bytes)header + sizeof(struct Header);
+static Bytes PagedAllocationData(PagedAllocationHeader header) {
+  // Return the data bytes associated with the header.
+  return (Bytes)header + Sizeof(PagedAllocationHeader);
 }
 
-PagedStack InitPagedStack(PagePool pool, PagedStack stack) {
-  stack = stack ? stack : AllocateStruct(PagedStack);
-  stack->pool = pool;
-  stack->latest_page = NULL;
-  _ByteBuffer(NULL, 0, &stack->stack_buffer_storage);
-  InitStack(&stack->stack_buffer_storage, &stack->stack_storage);
-  return stack;
+PagedStack MakePagedStack(PagePool pool) {
+  return InitPagedStack(pool, NULL, NULL, NULL);
+}
+PagedStack InitPagedStack(PagePool pool, ByteBuffer stack_byte_buffer, Stack stack, PagedStack paged_stack) {
+  return _PagedStack(pool, NULL, InitStack(_ByteBuffer(NULL, 0, stack_byte_buffer), stack), paged_stack);
+}
+
+static PagedAllocationHeader PagedStackAddHeader(PagedStack stack, b4 is_page, void *header_bytes) {
+  // Given the header+data bytes, add a new header to the paged stack's allocation list.
+  if (!header_bytes) return NULL;
+  PagedAllocationHeader header = (PagedAllocationHeader)header_bytes;
+  header->is_page = is_page;
+  // Add the header to the list of allocations, so it can be freed later
+  header->previous = stack->last_allocation;
+  stack->last_allocation = header;
+  return header;
 }
 
 void *PagedStackAllocate(PagedStack stack, size_t num_bytes) {
   const size_t page_size = stack->pool->page_size_in_bytes;
-  if (page_size / 2 < num_bytes) {
-    // Large allocation; use malloc
-    // Allocate the data + a header
-    Header header = malloc(sizeof(struct Header)+num_bytes);
+  const size_t max_small_allocation_size = page_size / 2;
+  if (num_bytes > max_small_allocation_size) {
+    // If the allocation is too big to allocate on a page, use malloc
+    PagedAllocationHeader header =
+      PagedStackAddHeader(stack, FALSE, malloc(Sizeof(PagedAllocationHeader)+num_bytes));
     if (!header) return NULL;
-    header->is_page = FALSE;
-    header->previous = stack->latest_page;
-    stack->latest_page = header;
-    return PageData(header);
+    return PagedAllocationData(header);
   } else {
     // Try allocating directly from the current stack.
-    void *result = StackAllocate(CurrentStack(stack), num_bytes);
+    void *result = StackAllocate(stack->stack, num_bytes);
     if (result) return result;
 
-    // Otherwise allocate another page.
-    Header page = (Header)PagePoolAllocate(stack->pool);
-    if (!page) return NULL;
+    // Not enough memory on the current page: allocate another page.
+    PagedAllocationHeader header =
+      PagedStackAddHeader(stack, TRUE, PagePoolAllocate(stack->pool));
+    if (!header) return NULL;
+    // Set up the stack to point at the new page
+    const size_t stack_size = page_size - Sizeof(PagedAllocationHeader);
+    _ByteBuffer(PagedAllocationData(header), stack_size, stack->stack->buffer);
+    StackClear(stack->stack);
 
-    page->previous = stack->latest_page;
-    page->is_page = TRUE;
-    stack->latest_page = page;
-    InitStack(
-        _ByteBuffer(PageData(page), page_size, &stack->stack_buffer_storage),
-        &stack->stack_storage);
-    return StackAllocate(CurrentStack(stack), num_bytes);
+    // Allocate from the stack
+    return StackAllocate(stack->stack, num_bytes);
   }
 }
 
 void PagedStackClear(PagedStack stack) {
-  Header current = stack->latest_page;
-  while (current) {
-    Header previous = current->previous;
-    if (current->is_page) {
-      PagePoolFree(stack->pool, (void *)current);
-    } else {
-      free((void *)current);
-    }
-    current = previous;
+  // Free all allocations on the allocation list.
+
+  // For each header in the stack->last_allocation list.
+  PagedAllocationHeader header = stack->last_allocation;
+  while (header) {
+    PagedAllocationHeader previous_header = header->previous;
+
+    // Free the data
+    void *data = (void *)header;
+    if (header->is_page) PagePoolFree(stack->pool, data);
+    else free(data);
+
+    header = previous_header;
   }
-  stack->latest_page = NULL;
-  InitStack(_ByteBuffer(0, 0, &stack->stack_buffer_storage), &stack->stack_storage);
+  stack->last_allocation = NULL;
+
+  // Reset the stack to an empty buffer.
+  _ByteBuffer(NULL, 0, stack->stack->buffer);
+  StackClear(stack->stack);
 }

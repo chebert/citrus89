@@ -7,6 +7,7 @@ jmp_buf global_allocator_jump_buffer;
 static void *MallocAllocate(void *data, size_t num_bytes) {
   return malloc(num_bytes);
 }
+
 static Allocator GlobalAllocator(Allocator set_allocator) {
   static Allocator allocator = 0;
   if (set_allocator) allocator = set_allocator;

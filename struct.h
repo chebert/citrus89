@@ -54,4 +54,7 @@
 #define Sizeof(struct_name)\
   (sizeof(struct struct_name))
 
+#define StructTypedef(struct_name)\
+  STRUCT_TYPEDEF(struct_name)
+
 #endif
