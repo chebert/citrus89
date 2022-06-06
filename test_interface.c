@@ -6,6 +6,7 @@
 #include "struct.h"
 #include "page_size.h"
 #include "paged_stack.h"
+#include "tagged_union.h"
 
 #define INTERFACE_Shape(m)\
   m(Shape, Area)\
@@ -92,10 +93,19 @@ Init functions (sometimes prefixed with _) take pointers to memory storage
 Make functions (sometimes postfixed with _) allocate memory storage using Allocate
 */
 
+#define TAGGED_UNION_Example(f)\
+  f(Example, int, Index)\
+  f(Example, Byte, Flag)\
+  f(Example, f8, Distance)
+
+TaggedUnion(Example)
+
 int main(int argc, char **argv) {
   PagedStack stack;
   Circle circle;
   WriterShape ss;
+  Example tagged;
+
   CatchGlobalAllocatorOutOfMemoryError {
     /* Run this code if we ever run out of memory. */
     fprintf(stderr, "Out of memory error\n");
@@ -107,6 +117,15 @@ int main(int argc, char **argv) {
   stack = MakePagedStack(MakePagePool(GetPageSizeInBytesFromOS()));
   SetGlobalAllocator(PagedStackAllocator(stack));
 
+  tagged = ExampleIndex_(32);
+#define Case(field) TaggedCase(tagged, Example, field)
+  TaggedSwitch(tagged) {
+    Case(Index)    printf("index %d\n", Index);        EndCase;
+    Case(Flag)     printf("flag %d\n", Flag);          EndCase;
+    Case(Distance) printf("distance %lf\n", Distance); EndCase;
+    default: printf("INVALID_TAG_TYPE\n"); break;
+  }
+#undef Case
   /* Now we are using the stack for Allocate calls */
   circle = Circle_(3, 4, 5);
 

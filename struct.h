@@ -41,14 +41,14 @@
   STRUCT_TYPEDEF(struct_name);\
   STRUCT_DECLARATION(struct_name)\
   STRUCT_INITIALIZER_DECLARATION(struct_name);\
-  STRUCT_CONSTRUCTOR_DECLARATION(struct_name)
+  STRUCT_CONSTRUCTOR_DECLARATION(struct_name);
 
 #define DefineStruct(struct_name)\
   STRUCT_INITIALIZER_DEFINITION(struct_name)\
   STRUCT_CONSTRUCTOR_DEFINITION(struct_name)
 
 #define Struct(struct_name)\
-  DeclareStruct(struct_name);\
+  DeclareStruct(struct_name)\
   DefineStruct(struct_name)
 
 #define LocalStruct(struct_name)\
@@ -60,6 +60,6 @@
   (sizeof(struct struct_name))
 
 #define StructTypedef(struct_name)\
-  STRUCT_TYPEDEF(struct_name)
+  STRUCT_TYPEDEF(struct_name);
 
 #endif

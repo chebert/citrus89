@@ -5,12 +5,12 @@
 #include "stack.h"
 #include "struct.h"
 
-StructTypedef(PagedAllocationHeader);
+StructTypedef(PagedAllocationHeader)
 #define STRUCT_PagedStack(f)\
   f(PagePool, pool)\
   f(PagedAllocationHeader, last_allocation)\
   f(Stack, stack)
-DeclareStruct(PagedStack);
+DeclareStruct(PagedStack)
 
 PagedStack MakePagedStack(PagePool pool);
 PagedStack InitPagedStack(PagePool pool, ByteBuffer stack_byte_buffer, Stack stack, PagedStack paged_stack);

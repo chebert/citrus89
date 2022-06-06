@@ -9,7 +9,7 @@
 #define STRUCT_Stack(f)\
   f(ByteBuffer, buffer)\
   f(size_t, index)
-DeclareStruct(Stack);
+DeclareStruct(Stack)
 
 Stack MakeStack(ByteBuffer buffer);
 Stack InitStack(ByteBuffer buffer, Stack stack);

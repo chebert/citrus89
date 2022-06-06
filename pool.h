@@ -4,10 +4,10 @@
 #include "struct.h"
 #include "type.h"
 
-StructTypedef(PoolFreeList);
+StructTypedef(PoolFreeList)
 #define STRUCT_Pool(f)\
   f(PoolFreeList, next)
-DeclareStruct(Pool);
+DeclareStruct(Pool)
 
 Pool MakePool();
 Pool InitPool(Pool pool);

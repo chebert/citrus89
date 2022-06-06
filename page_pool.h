@@ -8,7 +8,7 @@
 #define STRUCT_PagePool(f)\
   f(Pool, allocated_pages)\
   f(size_t, page_size_in_bytes)
-DeclareStruct(PagePool);
+DeclareStruct(PagePool)
 
 PagePool MakePagePool(size_t page_size_in_bytes);
 PagePool InitPagePool(size_t page_size_in_bytes, Pool allocated_pages, PagePool page_pool);

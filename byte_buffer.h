@@ -7,6 +7,6 @@
 #define STRUCT_ByteBuffer(f)\
   f(Bytes, buffer)\
   f(size_t, size)
-DeclareStruct(ByteBuffer);
+DeclareStruct(ByteBuffer)
 
 #endif
