@@ -1,3 +1,3 @@
 #include "allocator.h"
 
-DefineInterface(Allocator);
+DefineInterface(Allocator)

@@ -4,7 +4,7 @@
 #include "struct.h"
 #include "type.h"
 
-STRUCT_TYPEDEF(PoolFreeList);
+StructTypedef(PoolFreeList);
 #define STRUCT_Pool(f)\
   f(PoolFreeList, next)
 DeclareStruct(Pool);

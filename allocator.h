@@ -6,6 +6,6 @@
 
 #define INTERFACE_Allocator(M) M(Allocator, Allocate)
 #define METHOD_Allocator_Allocate(R, A) R(void *) A(size_t, num_bytes)
-DeclareInterface(Allocator);
+DeclareInterface(Allocator)
 
 #endif

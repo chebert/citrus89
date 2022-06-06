@@ -28,9 +28,6 @@ typedef double f8;
 
 typedef void *Any;
 
-/* Unsigned pointer-sized integer */
-typedef size_t uptr;
-
 typedef u1 Byte;
 typedef u1 *Bytes;
 

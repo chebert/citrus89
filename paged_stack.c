@@ -7,11 +7,11 @@
 #define STRUCT_PagedAllocationHeader(f)\
   f(PagedAllocationHeader, previous)\
   f(b4, is_page)
-Struct(PagedAllocationHeader);
-DefineStruct(PagedStack);
+LocalStruct(PagedAllocationHeader)
+DefineStruct(PagedStack)
 
 static Bytes PagedAllocationData(PagedAllocationHeader header) {
-  // Return the data bytes associated with the header.
+  /* Return the data bytes associated with the header. */
   return (Bytes)header + Sizeof(PagedAllocationHeader);
 }
 
@@ -23,11 +23,11 @@ PagedStack InitPagedStack(PagePool pool, ByteBuffer stack_byte_buffer, Stack sta
 }
 
 static PagedAllocationHeader PagedStackAddHeader(PagedStack stack, b4 is_page, void *header_bytes) {
-  // Given the header+data bytes, add a new header to the paged stack's allocation list.
-  if (!header_bytes) return NULL;
   PagedAllocationHeader header = (PagedAllocationHeader)header_bytes;
+  /* Given the header+data bytes, add a new header to the paged stack's allocation list. */
+  if (!header_bytes) return NULL;
   header->is_page = is_page;
-  // Add the header to the list of allocations, so it can be freed later
+  /* Add the header to the list of allocations, so it can be freed later */
   header->previous = stack->last_allocation;
   stack->last_allocation = header;
   return header;
@@ -35,41 +35,41 @@ static PagedAllocationHeader PagedStackAddHeader(PagedStack stack, b4 is_page, v
 
 void *PagedStackAllocate(PagedStack stack, size_t num_bytes) {
   const size_t page_size = stack->pool->page_size_in_bytes;
-  const size_t max_small_allocation_size = page_size / 2;
-  if (num_bytes > max_small_allocation_size) {
-    // If the allocation is too big to allocate on a page, use malloc
+  const size_t stack_size = page_size - Sizeof(PagedAllocationHeader);
+  if (num_bytes > stack_size) {
+    /* If the allocation is too big to allocate on a page, use malloc */
     PagedAllocationHeader header =
       PagedStackAddHeader(stack, FALSE, malloc(Sizeof(PagedAllocationHeader)+num_bytes));
     if (!header) return NULL;
     return PagedAllocationData(header);
   } else {
-    // Try allocating directly from the current stack.
+    /* Try allocating directly from the current stack. */
     void *result = StackAllocate(stack->stack, num_bytes);
     if (result) return result;
+    else {
+      /* Not enough memory on the current page: allocate another page. */
+      PagedAllocationHeader header =
+        PagedStackAddHeader(stack, TRUE, PagePoolAllocate(stack->pool));
+      if (!header) return NULL;
+      /* Set up the stack to point at the new page */
+      _ByteBuffer(PagedAllocationData(header), stack_size, stack->stack->buffer);
+      StackClear(stack->stack);
 
-    // Not enough memory on the current page: allocate another page.
-    PagedAllocationHeader header =
-      PagedStackAddHeader(stack, TRUE, PagePoolAllocate(stack->pool));
-    if (!header) return NULL;
-    // Set up the stack to point at the new page
-    const size_t stack_size = page_size - Sizeof(PagedAllocationHeader);
-    _ByteBuffer(PagedAllocationData(header), stack_size, stack->stack->buffer);
-    StackClear(stack->stack);
-
-    // Allocate from the stack
-    return StackAllocate(stack->stack, num_bytes);
+      /* Allocate from the stack */
+      return StackAllocate(stack->stack, num_bytes);
+    }
   }
 }
 
 void PagedStackClear(PagedStack stack) {
-  // Free all allocations on the allocation list.
+  /* Free all allocations on the allocation list. */
 
-  // For each header in the stack->last_allocation list.
+  /* For each header in the stack->last_allocation list. */
   PagedAllocationHeader header = stack->last_allocation;
   while (header) {
     PagedAllocationHeader previous_header = header->previous;
 
-    // Free the data
+    /* Free the data */
     void *data = (void *)header;
     if (header->is_page) PagePoolFree(stack->pool, data);
     else free(data);
@@ -78,7 +78,7 @@ void PagedStackClear(PagedStack stack) {
   }
   stack->last_allocation = NULL;
 
-  // Reset the stack to an empty buffer.
+  /* Reset the stack to an empty buffer. */
   _ByteBuffer(NULL, 0, stack->stack->buffer);
   StackClear(stack->stack);
 }

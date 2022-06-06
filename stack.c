@@ -2,7 +2,7 @@
 
 #include "allocator.h"
 
-DefineStruct(Stack);
+DefineStruct(Stack)
 
 Stack MakeStack(ByteBuffer buffer) {
   return Stack_(buffer, 0);

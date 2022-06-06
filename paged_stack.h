@@ -18,14 +18,14 @@ PagedStack InitPagedStack(PagePool pool, ByteBuffer stack_byte_buffer, Stack sta
 void *PagedStackAllocate(PagedStack stack, size_t num_bytes);
 void PagedStackClear(PagedStack stack);
 
-// Provides stack-based allocation for small allocations (<= 1/2 of a OS page size)
-// Uses a malloc-backed PagePool to allocate and free pages
-// For large allocations (>= 1/2 of an OS page size), uses malloc
+/* Provides stack-based allocation for small allocations (fits in a page of memory)
+Uses a malloc-backed PagePool to allocate and free pages
+For large allocations, uses malloc
 
-// If there are pages available, small allocations are O(1)
-// Freeing each page is O(1), while freeing each large allocation uses free()
+If there are pages available, small allocations are O(1)
+Freeing each page is O(1), while freeing each large allocation uses free()
 
-// Pre-allocating pages into the stack's page pool can avoid allocation costs of malloc at critical moments.
-// Multiple PagedStacks can share a single page pool.
+Pre-allocating pages into the stack's page pool can avoid allocation costs of malloc at critical moments.
+Multiple PagedStacks can share a single page pool. */
 
 #endif

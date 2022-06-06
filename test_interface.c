@@ -10,19 +10,19 @@
 #define INTERFACE_Shape(m)\
   m(Shape, Area)\
   m(Shape, SetPosition)
-#define METHOD_Shape_Area(r, a) r(double)
-#define METHOD_Shape_SetPosition(r, a) r(void) a(double, x) a(double, y)
-Interface(Shape);
+#define METHOD_Shape_Area(r, a) r(f8)
+#define METHOD_Shape_SetPosition(r, a) r(void) a(f8, x) a(f8, y)
+Interface(Shape)
 
-#define METHOD_Serialize_ToString(r, a) r(String)
-#define INTERFACE_Serialize(m) m(Serialize, ToString)
-Interface(Serialize);
+#define INTERFACE_Writer(m) m(Writer, Write)
+#define METHOD_Writer_Write(r, a) r(FILE *) a(FILE *, stream)
+Interface(Writer)
 
 #define STRUCT_Circle(f)\
-  f(double, x)\
-  f(double, y)\
-  f(double, radius)
-Struct(Circle);
+  f(f8, x)\
+  f(f8, y)\
+  f(f8, radius)
+Struct(Circle)
 
 Method(Circle, Shape, Area)
   return self->radius * self->radius * 3.14159;
@@ -32,33 +32,30 @@ Method(Circle, Shape, SetPosition)
   self->y = y;
 EndMethod
 
-Method(Circle, Serialize, ToString)
-  MString string = Allocate(256);
-  snprintf(string, 256, "Circle { .x=%lf, .y=%lf, .radius=%lf }", self->x, self->y, self->radius);
-  return string;
+Method(Circle, Writer, Write)
+  fprintf(stream, "Circle { .x=%lf, .y=%lf, .radius=%lf }", self->x, self->y, self->radius);
+  return stream;
 EndMethod
 
-// A composite interface is just a struct with interfaces for fields
-#define STRUCT_SerializableShape(f)\
-  f(Serialize, serialize)\
+/* A composite interface is just a struct with interfaces for fields */
+#define STRUCT_WriterShape(f)\
+  f(Writer, writer)\
   f(Shape, shape)
-Struct(SerializableShape);
+Struct(WriterShape)
 
 #define OBJECT Circle
-DefineConstructor(Shape);
-DefineConstructor(Serialize);
-DefineCompositeConstructor(SerializableShape);
+DefineConstructor(Shape)
+DefineConstructor(Writer)
+DefineCompositeConstructor(WriterShape)
 #undef OBJECT
 
-MethodDispatchFunctionAlias(Serialize, ToString, ToString);
-
-// TODO: move these allocators
+/* TODO: move these allocators */
 Method(PagedStack, Allocator, Allocate)
   return PagedStackAllocate(self, num_bytes);
 EndMethod
 
 #define OBJECT PagedStack
-DefineConstructor(Allocator);
+DefineConstructor(Allocator)
 #undef OBJECT
 
 Method(Stack, Allocator, Allocate)
@@ -66,14 +63,10 @@ Method(Stack, Allocator, Allocate)
 EndMethod
 
 #define OBJECT Stack
-DefineConstructor(Allocator);
+DefineConstructor(Allocator)
 #undef OBJECT
 
-// NOTE:
-// Init: _Type(type-field-arguments..., Type storage) => Type
-// Make: Type_(type-field-arguments...) => newly allocated Type
-
-#define STATIC_MEMORY_SIZE_IN_BYTES 1024
+#define STATIC_MEMORY_SIZE_IN_BYTES 4096
 static Allocator StaticAllocator() {
   static Byte memory[STATIC_MEMORY_SIZE_IN_BYTES];
   static struct ByteBuffer buffer;
@@ -89,41 +82,51 @@ static Allocator StaticAllocator() {
   return allocator;
 }
 
+/*
 #define QUOTE(...) #__VA_ARGS__
 #define PRINT(macro_call) printf("\"%s\" expands to \"%s\"\n", #macro_call, QUOTE(macro_call))
+*/
 
-
+/* NOTE:
+Init functions (sometimes prefixed with _) take pointers to memory storage
+Make functions (sometimes postfixed with _) allocate memory storage using Allocate
+*/
 
 int main(int argc, char **argv) {
+  PagedStack stack;
+  Circle circle;
+  WriterShape ss;
   CatchGlobalAllocatorOutOfMemoryError {
-    // Run this code if we ever run out of memory.
+    /* Run this code if we ever run out of memory. */
     fprintf(stderr, "Out of memory error\n");
     return -1;
   }
-  // Use a static stack to allocate
+  /* Use a static stack to allocate */
   SetGlobalAllocator(StaticAllocator());
 
-  PagedStack stack = MakePagedStack(MakePagePool(GetPageSizeInBytesFromOS()));
+  stack = MakePagedStack(MakePagePool(GetPageSizeInBytesFromOS()));
   SetGlobalAllocator(PagedStackAllocator(stack));
 
-  // Now we are using the stack for Allocate calls
-  Circle circle = Circle_(3, 4, 5);
+  /* Now we are using the stack for Allocate calls */
+  circle = Circle_(3, 4, 5);
 
-  // define multiple interfaces at once:
-  SerializableShape ss = CircleSerializableShape_(circle);
+  /* define multiple interfaces at once: */
+  ss = CircleWriterShape_(circle);
   printf("Area=%lf\n", ShapeArea(ss->shape));
   ShapeSetPosition(ss->shape, -3, -4);
-  printf("%s\n", ToString(ss->serialize));
+  WriterWrite(ss->writer, stdout);
+  printf("\n");
 
-  // Clear the stack
+  /* Clear the stack */
   PagedStackClear(stack);
 
   circle = Circle_(9, 10, 15);
 
-  // define multiple interfaces at once:
-  ss = CircleSerializableShape_(circle);
+  /* define multiple interfaces at once: */
+  ss = CircleWriterShape_(circle);
   printf("Area=%lf\n", ShapeArea(ss->shape));
   ShapeSetPosition(ss->shape, -3, -4);
-  printf("%s\n", ToString(ss->serialize));
+  WriterWrite(ss->writer, stdout);
+  printf("\n");
   return 0;
 }

@@ -14,7 +14,7 @@
 #define STRUCT_DECLARATION(struct_name)\
   struct struct_name { STRUCT_FOR_EACH_FIELD(struct_name, STRUCT_FIELD_DECLARATION) };
 
-#define STRUCT_TYPEDEF(struct_name) typedef struct struct_name *struct_name;
+#define STRUCT_TYPEDEF(struct_name) typedef struct struct_name *struct_name
 
 #define STRUCT_INITIALIZER_NAME(struct_name) _##struct_name
 #define STRUCT_CONSTRUCTOR_NAME(struct_name) struct_name##_
@@ -38,18 +38,23 @@
   }
 
 #define DeclareStruct(struct_name)\
-  STRUCT_TYPEDEF(struct_name)\
+  STRUCT_TYPEDEF(struct_name);\
   STRUCT_DECLARATION(struct_name)\
   STRUCT_INITIALIZER_DECLARATION(struct_name);\
-  STRUCT_CONSTRUCTOR_DECLARATION(struct_name);
+  STRUCT_CONSTRUCTOR_DECLARATION(struct_name)
 
 #define DefineStruct(struct_name)\
   STRUCT_INITIALIZER_DEFINITION(struct_name)\
   STRUCT_CONSTRUCTOR_DEFINITION(struct_name)
 
 #define Struct(struct_name)\
-  DeclareStruct(struct_name)\
+  DeclareStruct(struct_name);\
   DefineStruct(struct_name)
+
+#define LocalStruct(struct_name)\
+  STRUCT_DECLARATION(struct_name)\
+  static STRUCT_INITIALIZER_DEFINITION(struct_name)\
+  static STRUCT_CONSTRUCTOR_DEFINITION(struct_name)
 
 #define Sizeof(struct_name)\
   (sizeof(struct struct_name))

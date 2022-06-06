@@ -2,9 +2,9 @@
 
 #define STRUCT_PoolFreeList(f)\
   f(PoolFreeList, next)
-Struct(PoolFreeList);
+LocalStruct(PoolFreeList)
 
-DefineStruct(Pool);
+DefineStruct(Pool)
 
 Pool MakePool() { return InitPool(NULL); }
 Pool InitPool(Pool pool) {
